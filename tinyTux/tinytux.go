@@ -21,15 +21,15 @@ func main() {
     log.Fatal(http.ListenAndServe(":9998", api.MakeHandler()))
 }
 
+type Link struct {
+    url string
+}
+
 func GetURL(w rest.ResponseWriter, r *rest.Request) {
     urlCode := r.PathParam("code")
     fmt.Println(urlCode)
     http.Redirect(w.(http.ResponseWriter), r.Request, "https://google.com/", 301)
 
-}
-
-type Link struct {
-    url string
 }
 
 func ShortenURL(w rest.ResponseWriter, r *rest.Request) {
