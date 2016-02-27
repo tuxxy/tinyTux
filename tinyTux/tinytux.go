@@ -15,10 +15,6 @@ import (
 var dbmap = initDb()
 
 func main() {
-    // delete any existing rows
-    err := dbmap.TruncateTables()
-    checkErr(err, "TruncateTables failed")
-
     api := rest.NewApi()
     api.Use(rest.DefaultDevStack...)
     router, err := rest.MakeRouter(
