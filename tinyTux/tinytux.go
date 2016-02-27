@@ -2,7 +2,7 @@ package main
 
 import (
     "github.com/ant0ine/go-json-rest/rest"
-    "github.com/tuxxy/base62"
+    "bitbucket.org/tebeka/base62"
     "gopkg.in/gorp.v1"
     "database/sql"
     _ "github.com/go-sql-driver/mysql"
@@ -10,7 +10,6 @@ import (
     "fmt"
     "net/http"
     "time"
-    "strconv"
 )
 
 var dbmap = initDb()
@@ -61,8 +60,7 @@ func ShortenURL(w rest.ResponseWriter, r *rest.Request) {
     checkErr(err, "Insert failed")
 
     // Encode the id with base62
-    urlCode := strconv.FormatInt(link.Id, 10)
-    urlCode = base62.StdEncoding.EncodeToString([]byte(urlCode))
+    urlCode := base62.Encode(uint64(link.Id))
 
     w.WriteJson(map[string]string{"url": "tux.sh/l/"+urlCode})
 }
