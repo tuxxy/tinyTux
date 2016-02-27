@@ -40,9 +40,12 @@ type Url struct {
 }
 
 func GetURL(w rest.ResponseWriter, r *rest.Request) {
-    urlCode := r.PathParam("code")
-    fmt.Println(urlCode)
-    http.Redirect(w.(http.ResponseWriter), r.Request, "https://google.com/", 301)
+    urlCode := base62.Decode(r.PathParam("code"))
+    link := Link{}
+    err := dbmap.SelectOne(&link, "SELECT * FROM links WHERE id = :id",
+        map[string]interface{} {"id": urlCode})
+    checkErr(err, "Failed to find link with urlCode")
+    http.Redirect(w.(http.ResponseWriter), r.Request, link.URL, 301)
 
 }
 
@@ -67,7 +70,7 @@ func ShortenURL(w rest.ResponseWriter, r *rest.Request) {
 
 func newLink(url string) Link {
     return Link{
-        Created: time.Now().UnixNano(),
+        Created: time.Now().Unix(),
         URL: url,
     }
 }
