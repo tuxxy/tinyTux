@@ -7,7 +7,6 @@ import (
     "database/sql"
     _ "github.com/go-sql-driver/mysql"
     "log"
-    "fmt"
     "net/http"
     "time"
 )
@@ -25,7 +24,6 @@ func main() {
         log.Fatal(err)
     }
     api.SetApp(router)
-    fmt.Println("App started!")
     log.Fatal(http.ListenAndServe(":9998", api.MakeHandler()))
 
     dbmap.Db.Close()
