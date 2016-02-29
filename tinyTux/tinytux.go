@@ -1,65 +1,63 @@
 package main
 
 import (
-    "github.com/ant0ine/go-json-rest/rest"
-    "bitbucket.org/tebeka/base62"
-    "gopkg.in/gorp.v1"
     "database/sql"
-    _ "github.com/go-sql-driver/mysql"
     "log"
     "net/http"
+    "encoding/json"
     "time"
+
+    "github.com/gorilla/mux"
+    "bitbucket.org/tebeka/base62"
+    "gopkg.in/gorp.v1"
+    _ "github.com/go-sql-driver/mysql"
 )
 
 var dbmap = initDb()
 
 func main() {
-    api := rest.NewApi()
-    api.Use(rest.DefaultDevStack...)
-    router, err := rest.MakeRouter(
-        rest.Get("/l/:code", GetURL),
-        rest.Post("/l", ShortenURL),
-    )
-    if err != nil {
-        log.Fatal(err)
-    }
-    api.SetApp(router)
-    log.Fatal(http.ListenAndServe(":9998", api.MakeHandler()))
+    defer dbmap.Db.Close()
 
-    dbmap.Db.Close()
+    router := mux.NewRouter().StrictSlash(true)
+    router.HandleFunc("/{code}/", GetURL).Methods("GET")
+    router.HandleFunc("/", ShortenURL).Methods("POST")
+
+    log.Fatal(http.ListenAndServe(":9998", router))
 }
 
 type Url struct {
     URL string
 }
 
-func GetURL(w rest.ResponseWriter, r *rest.Request) {
-    urlCode := base62.Decode(r.PathParam("code"))
+func GetURL(w http.ResponseWriter, r *http.Request) {
     link := Link{}
+    urlCode := base62.Decode(mux.Vars(r)["code"])
     err := dbmap.SelectOne(&link, "SELECT * FROM links WHERE id = :id",
         map[string]interface{} {"id": urlCode})
     checkErr(err, "Failed to find link with urlCode")
-    http.Redirect(w.(http.ResponseWriter), r.Request, link.URL, 301)
+    http.Redirect(w, r, link.URL, 301)
 
 }
 
-func ShortenURL(w rest.ResponseWriter, r *rest.Request) {
-    newURL := Url{}
-    err := r.DecodeJsonPayload(&newURL)
+func ShortenURL(w http.ResponseWriter, r *http.Request) {
+    link := Url{}
+    err := json.NewDecoder(r.Body).Decode(&link) 
     if err != nil {
-        rest.Error(w, "link required", 400)
+        http.Error(w, "link required", 400)
         return
     }
     
     // Create the row
-    link := newLink(newURL.URL)
-    err = dbmap.Insert(&link)
+    shortLink := newLink(link.URL)
+    err = dbmap.Insert(&shortLink)
     checkErr(err, "Insert failed")
 
     // Encode the id with base62
-    urlCode := base62.Encode(uint64(link.Id))
-
-    w.WriteJson(map[string]string{"url": "tux.sh/l/"+urlCode})
+    url := Url{
+        URL: "https://tux.sh/l/" + base62.Encode(uint64(shortLink.Id)),
+    }
+    
+    json.NewEncoder(w).Encode(url)
 }
 
 func newLink(url string) Link {
@@ -71,15 +69,12 @@ func newLink(url string) Link {
 
 func initDb() *gorp.DbMap {
     // Connect to db using stdlib sql driver
-    db, err := sql.Open("mysql", "test:testPASS@/tux_sh")
+    db, err := sql.Open("mysql", "tinytux:secure,protocol=error5@/tux_sh")
     checkErr(err, "sql.Open failed")
-
     dbmap := gorp.DbMap{Db: db, Dialect: gorp.MySQLDialect{"InnoDB", "UTF8"}}
 
-    // Add the table
     dbmap.AddTableWithName(Link{}, "links").SetKeys(true, "Id")
 
-    // Create the tables
     err = dbmap.CreateTablesIfNotExists()
     checkErr(err, "Create tables failed")
 
