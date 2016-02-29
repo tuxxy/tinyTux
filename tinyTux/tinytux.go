@@ -69,7 +69,7 @@ func newLink(url string) Link {
 
 func initDb() *gorp.DbMap {
     // Connect to db using stdlib sql driver
-    db, err := sql.Open("mysql", "tinytux:secure,protocol=error5@/tux_sh")
+    db, err := sql.Open("mysql", "test:testPASS@/tux_sh")
     checkErr(err, "sql.Open failed")
     dbmap := gorp.DbMap{Db: db, Dialect: gorp.MySQLDialect{"InnoDB", "UTF8"}}
 
